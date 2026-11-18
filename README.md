@@ -1,6 +1,6 @@
-# TapRecorder
+# Wiretapper
 
-TapRecorder is a small, open-source macOS menu bar app that records your Mac's internal audio to a file. It records what your Mac is playing and never records a microphone.
+Wiretapper is a small, open-source macOS menu bar app that records your Mac's internal audio to a file. It records what your Mac is playing and never records a microphone.
 
 > **Screenshot:** add a screenshot of the menu bar app here.
 
@@ -14,16 +14,36 @@ TapRecorder is a small, open-source macOS menu bar app that records your Mac's i
   - FLAC
   - WAV (24-bit)
   - AIFF (24-bit)
-- Choose your output folder. The default is `~/Music/TapRecorder`.
+- Choose your output folder. The default is `~/Music/Wiretapper`.
 - Get a notification when a recording is saved. Click it to show the file in Finder.
-- Optionally start TapRecorder when you log in.
+- Optionally start Wiretapper when you log in.
 
-## Download
+## Install
 
-1. Download `TapRecorder.zip` from the [latest release](https://github.com/printMoney/TapRecorder/releases).
-2. Open the zip file and drag **TapRecorder** into your **Applications** folder.
-3. Open TapRecorder. macOS will block it the first time because this beta is not notarized by Apple.
-4. Go to **System Settings > Privacy & Security**, scroll down, and click **Open Anyway** next to TapRecorder.
+### With Homebrew
+
+```bash
+brew tap printmoney/tap
+```
+
+```bash
+brew trust printmoney/tap
+```
+
+```bash
+brew install --cask wiretapper
+```
+
+Homebrew asks you to trust third-party taps once before installing from them.
+
+### Manual download
+
+1. Download `Wiretapper.zip` from the [releases page](https://github.com/printMoney/wiretapper/releases).
+2. Open the zip file and drag **Wiretapper** into your **Applications** folder.
+
+### First launch
+
+macOS may block Wiretapper the first time because this beta is not notarized by Apple. If it does, go to **System Settings > Privacy & Security**, scroll down, and click **Open Anyway** next to Wiretapper.
 
 ## Requirements
 
@@ -33,28 +53,28 @@ TapRecorder is a small, open-source macOS menu bar app that records your Mac's i
 ## Build and run in Xcode
 
 1. Download or clone this repository.
-2. Double-click `TapRecorder.xcodeproj` to open it in Xcode.
-3. At the top of the Xcode window, check that the scheme says **TapRecorder** and the destination says **My Mac**.
+2. Double-click `Wiretapper.xcodeproj` to open it in Xcode.
+3. At the top of the Xcode window, check that the scheme says **Wiretapper** and the destination says **My Mac**.
 4. Click the **Play** button, or press **Command-R**.
-5. Look for the small circle icon near the right side of your menu bar. TapRecorder has no Dock icon or main window.
+5. Look for the small circle icon near the right side of your menu bar. Wiretapper has no Dock icon or main window.
 
 ## How permissions work
 
-**System audio recording:** macOS asks for permission the first time you record. If you deny it, TapRecorder shows a button that opens System Settings. You can change it later in **System Settings > Privacy & Security > Screen & System Audio Recording**, under **System Audio Recording Only**.
+**System audio recording:** macOS asks for permission the first time you record. If you deny it, Wiretapper shows a button that opens System Settings. You can change it later in **System Settings > Privacy & Security > Screen & System Audio Recording**, under **System Audio Recording Only**.
 
-**Notifications:** macOS asks whether TapRecorder can show notifications. If you turn them off, recording still works, and problems appear in an alert window instead.
+**Notifications:** macOS asks whether Wiretapper can show notifications. If you turn them off, recording still works, and problems appear in an alert window instead.
 
-**Microphone:** TapRecorder does not request microphone access and does not open any microphone.
+**Microphone:** Wiretapper does not request microphone access and does not open any microphone.
 
 Development builds are signed locally, so macOS may ask for system audio permission again after the code changes.
 
 ## Good to know
 
-- WAV and AIFF files can't be larger than 4 GB, which is about 4 hours at 48 kHz. TapRecorder saves the recording and tells you if it reaches that limit.
+- WAV and AIFF files can't be larger than 4 GB, which is about 4 hours at 48 kHz. Wiretapper saves the recording and tells you if it reaches that limit.
 - Recording stops and saves if your sound output device changes.
 - M4A recordings above 48 kHz are converted to 48 kHz.
-- Apps that replay another app's sound can make recordings echo. TapRecorder leaves out VolumeRocker for this reason. Other apps that work this way may need to be closed while recording.
+- Apps that replay another app's sound can make recordings echo. Wiretapper leaves out VolumeRocker for this reason. Other apps that work this way may need to be closed while recording.
 
 ## License
 
-TapRecorder is released under the [MIT License](LICENSE). It uses only Apple's built-in frameworks and bundles no third-party code.
+Wiretapper is released under the [MIT License](LICENSE). It uses only Apple's built-in frameworks and bundles no third-party code.

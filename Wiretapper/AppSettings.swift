@@ -20,14 +20,14 @@ final class AppSettings {
         }
     }
 
-    /// Where recordings are saved. ~/Music/TapRecorder until the user picks another.
+    /// Where recordings are saved. ~/Music/Wiretapper until the user picks another.
     var outputFolder: URL {
         get {
             if let savedPath = defaults.string(forKey: Key.outputFolder) {
                 return URL(fileURLWithPath: savedPath, isDirectory: true)
             }
             return FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Music/TapRecorder", isDirectory: true)
+                .appendingPathComponent("Music/Wiretapper", isDirectory: true)
         }
         set {
             defaults.set(newValue.path, forKey: Key.outputFolder)

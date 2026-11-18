@@ -80,7 +80,7 @@ final class SystemAudioRecorder {
         excludedProcesses = Self.processesToExclude()
         let description = CATapDescription(excludingProcesses: excludedProcesses, deviceUID: outputUID, stream: 0)
         tapDescription = description
-        description.name = "TapRecorder"
+        description.name = "Wiretapper"
         description.isPrivate = true
         description.isMixdown = true
         description.isMono = false
@@ -99,8 +99,8 @@ final class SystemAudioRecorder {
     /// interfaces can include microphones, and those must never be opened.
     private func createAggregateDevice(tapUID: String) throws {
         let settings: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "TapRecorder Capture",
-            kAudioAggregateDeviceUIDKey: "io.github.taprecorder.capture.\(UUID().uuidString)",
+            kAudioAggregateDeviceNameKey: "Wiretapper Capture",
+            kAudioAggregateDeviceUIDKey: "io.github.printmoney.wiretapper.capture.\(UUID().uuidString)",
             kAudioAggregateDeviceIsPrivateKey: true,
             kAudioAggregateDeviceTapAutoStartKey: true,
             kAudioAggregateDeviceTapListKey: [[

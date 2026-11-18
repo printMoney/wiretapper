@@ -147,8 +147,8 @@ final class StatusBarController: NSObject {
 
     private func showPermissionDeniedAlert() {
         let alert = NSAlert()
-        alert.messageText = "TapRecorder can't record system audio"
-        alert.informativeText = "Allow TapRecorder in System Settings > Privacy & Security > "
+        alert.messageText = "Wiretapper can't record system audio"
+        alert.informativeText = "Allow Wiretapper in System Settings > Privacy & Security > "
             + "Screen & System Audio Recording, under System Audio Recording Only. Then try again."
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Cancel")

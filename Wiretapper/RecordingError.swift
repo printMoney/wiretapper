@@ -27,11 +27,11 @@ enum RecordingError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .couldNotCreateFolder(let path):
-            return "TapRecorder could not create the folder \(path)."
+            return "Wiretapper could not create the folder \(path)."
         case .couldNotCreateFile(let status):
-            return "TapRecorder could not create the recording file. (Error \(status))"
+            return "Wiretapper could not create the recording file. (Error \(status))"
         case .couldNotStartCapture(let step, let status):
-            return "TapRecorder could not start recording: \(step). (Error \(status))"
+            return "Wiretapper could not start recording: \(step). (Error \(status))"
         case .noAudioCaptured:
             return "No audio was captured, so no file was saved."
         case .writeFailed(let url, let status):

@@ -74,7 +74,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     // MARK: - UNUserNotificationCenterDelegate
 
-    /// Shows the notification even though TapRecorder is the running app.
+    /// Shows the notification even though Wiretapper is the running app.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
