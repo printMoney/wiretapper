@@ -18,10 +18,17 @@ TapRecorder is a small, open-source macOS menu bar app that records your Mac's i
 - Get a notification when a recording is saved. Click it to show the file in Finder.
 - Optionally start TapRecorder when you log in.
 
+## Download
+
+1. Download `TapRecorder.zip` from the [latest release](https://github.com/printMoney/TapRecorder/releases).
+2. Open the zip file and drag **TapRecorder** into your **Applications** folder.
+3. Open TapRecorder. macOS will block it the first time because this beta is not notarized by Apple.
+4. Go to **System Settings > Privacy & Security**, scroll down, and click **Open Anyway** next to TapRecorder.
+
 ## Requirements
 
 - macOS 14.4 or later
-- Xcode 16 or later to build the app
+- Xcode 16 or later if you want to build the app yourself
 
 ## Build and run in Xcode
 
