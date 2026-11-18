@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Xcode build output
+build/
+DerivedData/
+
+# Personal Xcode settings
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Archives and debug symbols
+*.xcarchive
+*.dSYM
+*.dSYM.zip
