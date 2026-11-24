@@ -5,6 +5,7 @@ final class AppSettings {
     private enum Key {
         static let format = "recordingFormat"
         static let outputFolder = "outputFolderPath"
+        static let unfinishedRecording = "unfinishedRecordingPath"
     }
 
     private let defaults = UserDefaults.standard
@@ -32,5 +33,12 @@ final class AppSettings {
         set {
             defaults.set(newValue.path, forKey: Key.outputFolder)
         }
+    }
+
+    /// The file being recorded, remembered until it is finished. If the app
+    /// crashes or is force quit, this tells the next launch to warn the user.
+    var unfinishedRecordingPath: String? {
+        get { defaults.string(forKey: Key.unfinishedRecording) }
+        set { defaults.set(newValue, forKey: Key.unfinishedRecording) }
     }
 }

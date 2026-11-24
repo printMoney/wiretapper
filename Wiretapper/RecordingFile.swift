@@ -3,6 +3,10 @@ import Foundation
 
 /// An audio file on disk that receives sound while recording is in progress.
 final class RecordingFile {
+    /// Recording stops before free space drops below this, about 200 MB.
+    /// A completely full disk can leave M4A and FLAC files unplayable.
+    static let minimumFreeSpace: Int64 = 200_000_000
+
     let url: URL
     private let format: RecordingFormat
     private let channelCount: Int64
@@ -15,6 +19,9 @@ final class RecordingFile {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         } catch {
             throw RecordingError.couldNotCreateFolder(folder.path)
+        }
+        if let freeSpace = Self.availableSpace(in: folder), freeSpace < Self.minimumFreeSpace {
+            throw RecordingError.notEnoughDiskSpace(folder.path)
         }
 
         var fileFormat = try Self.fileDescription(
@@ -49,7 +56,7 @@ final class RecordingFile {
             setupStatus = ExtAudioFileWriteAsync(createdFile, 0, nil)
         }
         guard setupStatus == noErr else {
-            ExtAudioFileDispose(createdFile)
+            ExtAudioFileDispose(createdFile) // Nothing was written yet, so this finishes at once.
             try? FileManager.default.removeItem(at: fileURL)
             throw RecordingError.couldNotCreateFile(setupStatus)
         }
@@ -166,8 +173,25 @@ final class RecordingFile {
     }
 
     /// Saves anything still queued and finishes the file. Call this exactly once.
-    func close() -> OSStatus {
-        ExtAudioFileDispose(audioFile)
+    ///
+    /// In rare cases, such as a FLAC file on a completely full disk, macOS
+    /// never finishes. This gives up after `timeout` seconds and returns nil.
+    func finish(timeout: TimeInterval) -> OSStatus? {
+        let result = FinishResult()
+        let audioFile = audioFile
+        DispatchQueue.global(qos: .userInitiated).async {
+            result.status = ExtAudioFileDispose(audioFile)
+            result.done.signal()
+        }
+        guard result.done.wait(timeout: .now() + timeout) == .success else { return nil }
+        return result.status
+    }
+
+    /// Free space on the disk that holds `folder`, in bytes. This asks the
+    /// disk every time, because a remembered answer would quickly go stale.
+    static func availableSpace(in folder: URL) -> Int64? {
+        let attributes = try? FileManager.default.attributesOfFileSystem(forPath: folder.path)
+        return (attributes?[.systemFreeSize] as? NSNumber)?.int64Value
     }
 
     /// Builds "Recording 2026-11-18 at 14.32.05.wav", adding " (2)" and so on
@@ -186,4 +210,10 @@ final class RecordingFile {
         }
         return candidate
     }
+}
+
+/// Carries the result of finishing a file back from a background thread.
+private final class FinishResult {
+    var status: OSStatus = noErr
+    let done = DispatchSemaphore(value: 0)
 }

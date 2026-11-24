@@ -1,8 +1,21 @@
+<p align="center"><img src="docs/icon.png" width="128" alt="Wiretapper icon"></p>
+
 # Wiretapper
 
 Wiretapper is a small, open-source macOS menu bar app that records your Mac's internal audio to a file. It records what your Mac is playing and never records a microphone.
 
-> **Screenshot:** add a screenshot of the menu bar app here.
+> ## ⚠️ Disclaimer
+>
+> This app is:
+> - **Vibecoded**: written with AI assistance. I can't read or write code and don't know exactly what the AI wrote.
+> - **Open source**: free to read, use, and modify
+> - **Collecting no data**: my apps are not meant to collect any data, and I never will intentionally collect any
+> - **Experimental**: they may be buggy, incomplete, or break without notice
+>
+> **Use at your own risk.** There is no warranty of any kind.
+> When in doubt, have your own AI or yourself review the code before you run anything.
+>
+> **Found a problem?** If you can show that one of my apps collects data or has bugs, open an issue or send a commit. I will fix it right away.
 
 ## Features
 
@@ -35,6 +48,8 @@ brew install --cask wiretapper
 ```
 
 Homebrew asks you to trust third-party taps once before installing from them.
+
+Update with `brew upgrade --cask wiretapper`. Uninstall with `brew uninstall --cask wiretapper`, and add `--zap` to also remove its settings. Your recordings are never deleted.
 
 ### Manual download
 
@@ -72,8 +87,10 @@ Development builds are signed locally, so macOS may ask for system audio permiss
 
 - WAV and AIFF files can't be larger than 4 GB, which is about 4 hours at 48 kHz. Wiretapper saves the recording and tells you if it reaches that limit.
 - Recording stops and saves if your sound output device changes.
+- Recording stops and saves when less than about 200 MB of disk space is left, so the file stays playable.
+- If Wiretapper crashes or is force quit while recording, it tells you the next time it opens, because that file may not play.
 - M4A recordings above 48 kHz are converted to 48 kHz.
-- Apps that replay another app's sound can make recordings echo. Wiretapper leaves out VolumeRocker for this reason. Other apps that work this way may need to be closed while recording.
+- Apps that replay another app's sound can make recordings echo. Wiretapper leaves out Volume Rocker for this reason. Other apps that work this way may need to be closed while recording.
 
 ## License
 

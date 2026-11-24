@@ -27,11 +27,15 @@ final class StatusBarController: NSObject {
 
         showIdleAppearance()
         createOutputFolder()
+        warnAboutUnfinishedRecording()
 
-        // If recording ends by itself, such as when the disk is full, update
-        // the icon and explain what happened.
-        recorder.onInterrupted = { [weak self] error in
+        // If recording ends by itself, such as when the disk is almost full,
+        // update the icon at once and explain what happened once it is saved.
+        recorder.onStopping = { [weak self] in
             self?.showStoppedState()
+        }
+        recorder.onInterrupted = { [weak self] error in
+            self?.forgetFinishedRecording()
             Notifier.shared.showProblem(error)
         }
     }
@@ -95,6 +99,7 @@ final class StatusBarController: NSObject {
             Notifier.shared.showProblem(error)
             return
         }
+        settings.unfinishedRecordingPath = recorder.currentFileURL?.path
 
         recordingStartDate = Date()
         showRecordingAppearance()
@@ -110,20 +115,46 @@ final class StatusBarController: NSObject {
 
     private func stopRecording() {
         showStoppedState()
-        do {
-            let savedFile = try recorder.stop()
-            Notifier.shared.showSaved(savedFile)
-        } catch {
-            Notifier.shared.showProblem(error)
+        recorder.stop { [weak self] result in
+            self?.forgetFinishedRecording()
+            switch result {
+            case .success(let savedFile): Notifier.shared.showSaved(savedFile)
+            case .failure(let error): Notifier.shared.showProblem(error)
+            }
         }
     }
 
     /// Makes sure a recording in progress is saved properly when the app quits.
     func finishRecordingBeforeQuit() {
-        if recorder.isRecording {
-            stopRecording()
-            Notifier.shared.waitUntilDelivered()
+        guard recorder.isRecording else { return }
+        switch recorder.stopAndWait() {
+        case .success(let savedFile):
+            settings.unfinishedRecordingPath = nil
+            Notifier.shared.showSaved(savedFile)
+        case .failure(let error):
+            // A file that couldn't be finished stays remembered, so the next
+            // launch can warn about it if this message doesn't get through.
+            if case RecordingError.couldNotFinishInTime = error {} else {
+                settings.unfinishedRecordingPath = nil
+            }
+            Notifier.shared.showProblem(error)
         }
+        Notifier.shared.waitUntilDelivered()
+    }
+
+    /// Forgets a finished recording, unless a newer one has started since.
+    private func forgetFinishedRecording() {
+        if settings.unfinishedRecordingPath != recorder.currentFileURL?.path {
+            settings.unfinishedRecordingPath = nil
+        }
+    }
+
+    /// If Wiretapper crashed or was force quit while recording, say so now.
+    private func warnAboutUnfinishedRecording() {
+        guard let path = settings.unfinishedRecordingPath else { return }
+        settings.unfinishedRecordingPath = nil
+        guard FileManager.default.fileExists(atPath: path) else { return }
+        Notifier.shared.showProblem(RecordingError.unfinishedFromLastTime(URL(fileURLWithPath: path)))
     }
 
     /// Puts the icon back to normal and stops the timer.

@@ -10,10 +10,16 @@ import Foundation
 ///    source is the tap, so a microphone can never be part of a recording.
 /// 3. macOS calls our code many times a second with the next slice of sound.
 final class SystemAudioRecorder {
-    /// Called on the main thread if recording ends without the user stopping it.
+    /// Called on the main thread the moment recording stops without the user
+    /// asking, such as when the disk is almost full.
+    var onStopping: (() -> Void)?
+    /// Called on the main thread once that file is finished, explaining why it stopped.
     var onInterrupted: ((Error) -> Void)?
 
     private(set) var isRecording = false
+
+    /// The file being recorded right now, if any.
+    var currentFileURL: URL? { file?.url }
 
     /// Apps that replay another app's sound. Recording them as well would
     /// put the same sound in the file twice, which is heard as an echo.
@@ -31,6 +37,7 @@ final class SystemAudioRecorder {
     private var outputSampleRate: Float64 = 0
     private var outputDeviceListener: AudioObjectPropertyListenerBlock?
     private var sampleRateListener: AudioObjectPropertyListenerBlock?
+    private var diskSpaceTimer: Timer?
 
     // These are shared with the audio thread. They are set up before capture
     // starts and read after it stops, so the two sides never collide.
@@ -59,12 +66,13 @@ final class SystemAudioRecorder {
             file = newFile
             try startCapture(into: newFile, format: format)
             startWatchingOutputDevice()
+            startWatchingDiskSpace(in: folder)
             isRecording = true
         } catch {
             // Undo whatever was set up, and remove the unused empty file.
             stopCapture()
             if let unusedFile = file {
-                _ = unusedFile.close()
+                _ = unusedFile.finish(timeout: 5)
                 try? FileManager.default.removeItem(at: unusedFile.url)
                 file = nil
             }
@@ -171,36 +179,68 @@ final class SystemAudioRecorder {
 
     // MARK: - Stop
 
-    /// Stops recording, finishes the file, and returns where it was saved.
-    @discardableResult
-    func stop() throws -> URL {
+    /// Stops recording at once, then finishes the file in the background so the
+    /// menu bar never freezes. `completion` runs on the main thread.
+    func stop(completion: @escaping (Result<URL, Error>) -> Void) {
+        guard let capture = detachFile() else {
+            completion(.failure(RecordingError.noAudioCaptured))
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = Self.finish(capture, timeout: 20)
+            DispatchQueue.main.async { completion(result) }
+        }
+    }
+
+    /// Used while the app quits: stops and waits a few seconds for the file.
+    func stopAndWait() -> Result<URL, Error> {
+        guard let capture = detachFile() else { return .failure(RecordingError.noAudioCaptured) }
+        return Self.finish(capture, timeout: 5)
+    }
+
+    /// What is needed to finish a file after its recording has stopped.
+    private struct StoppedCapture {
+        let file: RecordingFile
+        let framesWritten: Int64
+        let writeStatus: OSStatus
+    }
+
+    private func detachFile() -> StoppedCapture? {
         stopCapture()
         isRecording = false
 
-        guard let file else { throw RecordingError.noAudioCaptured }
+        guard let file else { return nil }
         self.file = nil
+        return StoppedCapture(file: file, framesWritten: framesWritten.pointee, writeStatus: writeStatus.pointee)
+    }
 
-        let closeStatus = file.close()
-
-        if writeStatus.pointee != noErr {
-            if file.hasReachedSizeLimit(framesWritten: framesWritten.pointee) {
-                throw RecordingError.fileSizeLimitReached(file.url)
+    /// Finishes the file and decides whether it was saved properly.
+    private static func finish(_ capture: StoppedCapture, timeout: TimeInterval) -> Result<URL, Error> {
+        let url = capture.file.url
+        guard let finishStatus = capture.file.finish(timeout: timeout) else {
+            return .failure(RecordingError.couldNotFinishInTime(url))
+        }
+        if capture.writeStatus != noErr {
+            if capture.file.hasReachedSizeLimit(framesWritten: capture.framesWritten) {
+                return .failure(RecordingError.fileSizeLimitReached(url))
             }
-            throw RecordingError.writeFailed(file.url, writeStatus.pointee)
+            return .failure(RecordingError.writeFailed(url, capture.writeStatus))
         }
-        if closeStatus != noErr {
-            throw RecordingError.couldNotFinishFile(file.url, closeStatus)
+        if finishStatus != noErr {
+            return .failure(RecordingError.couldNotFinishFile(url, finishStatus))
         }
-        if framesWritten.pointee == 0 {
-            try? FileManager.default.removeItem(at: file.url)
-            throw RecordingError.noAudioCaptured
+        if capture.framesWritten == 0 {
+            try? FileManager.default.removeItem(at: url)
+            return .failure(RecordingError.noAudioCaptured)
         }
-        return file.url
+        return .success(url)
     }
 
     /// Takes everything apart in the reverse order it was built.
     private func stopCapture() {
         stopWatchingOutputDevice()
+        diskSpaceTimer?.invalidate()
+        diskSpaceTimer = nil
 
         if let ioProcID {
             AudioDeviceStop(aggregateDeviceID, ioProcID)
@@ -221,13 +261,21 @@ final class SystemAudioRecorder {
 
     // MARK: - Problems during recording
 
-    private func handleWriteFailure() {
+    /// Stops without the user asking and reports why. `reason` explains a
+    /// file that was saved properly; other problems are reported as they are.
+    private func stopByItself(reason: @escaping (URL) -> RecordingError) {
         guard isRecording else { return }
-        do {
-            try stop()
-        } catch {
-            onInterrupted?(error)
+        onStopping?()
+        stop { [weak self] result in
+            switch result {
+            case .success(let url): self?.onInterrupted?(reason(url))
+            case .failure(let error): self?.onInterrupted?(error)
+            }
         }
+    }
+
+    private func handleWriteFailure() {
+        stopByItself { RecordingError.writeFailed($0, noErr) }
     }
 
     /// The capture is tied to the current speakers, so if they change we save
@@ -238,12 +286,18 @@ final class SystemAudioRecorder {
         let currentRate = try? Self.sampleRate(of: outputDeviceID)
         guard currentDevice != outputDeviceID || currentRate != outputSampleRate else { return }
 
-        do {
-            let url = try stop()
-            onInterrupted?(RecordingError.outputDeviceChanged(url))
-        } catch {
-            onInterrupted?(error)
+        stopByItself(reason: RecordingError.outputDeviceChanged)
+    }
+
+    /// Checks free space every few seconds and stops before the disk is full.
+    private func startWatchingDiskSpace(in folder: URL) {
+        let timer = Timer(timeInterval: 2, repeats: true) { [weak self] _ in
+            guard let freeSpace = RecordingFile.availableSpace(in: folder),
+                  freeSpace < RecordingFile.minimumFreeSpace else { return }
+            self?.stopByItself(reason: RecordingError.diskAlmostFull)
         }
+        RunLoop.main.add(timer, forMode: .common)
+        diskSpaceTimer = timer
     }
 
     /// If an excluded app starts while recording, leave it out from then on.
