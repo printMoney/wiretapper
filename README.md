@@ -92,6 +92,10 @@ Development builds are signed locally, so macOS may ask for system audio permiss
 - M4A recordings above 48 kHz are converted to 48 kHz.
 - Apps that replay another app's sound can make recordings echo. Wiretapper leaves out Volume Rocker for this reason. Other apps that work this way may need to be closed while recording.
 
+## Roadmap
+
+- Record microphone
+
 ## License
 
 Wiretapper is released under the [MIT License](LICENSE). It uses only Apple's built-in frameworks and bundles no third-party code.
